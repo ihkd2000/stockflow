@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stockflow"
+version = "0.1.0"
+description = "Warehouse inventory operations with an auditable stock ledger"
+requires-python = ">=3.10"
+dependencies = ["fastapi>=0.110,<1", "uvicorn>=0.27,<1"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "httpx>=0.27,<1"]
+
+[tool.setuptools.package-data]
+stockflow = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
