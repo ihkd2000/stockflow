@@ -18,3 +18,13 @@ Keep each feature as a realistic business request. Existing receiving, issuing, 
 - Tests cover happy paths, rejected operations, retries, concurrent modifications, and upgrades.
 - Rollback on failure never leaves an incomplete multi-step transaction.
 - Existing workflows remain compatible, and documentation stays accurate.
+
+### Completed in v0.2
+- Physical cycle counts per warehouse with product-by-product entries, variance review, and atomic ledger reconciliation.
+- Stale snapshot detection, reserved-stock constraints, safe retry and cancellation, regression tests.
+
+### Proposed follow-on work
+- Multi-page dashboard/navigation and searchable, editable product/warehouse views.
+- Scoped cycle counts, blind counting, variance approval, and multi-pass recount workflows.
+- Purchase-order editing, receiving discrepancies, and supplier returns.
+- Sales orders and fulfillment with inventory allocation.

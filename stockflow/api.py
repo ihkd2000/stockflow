@@ -5,16 +5,17 @@ from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from . import service
-from .db import init_db, init_commerce_db
+from .db import init_db, init_commerce_db, init_counts_db
 
 @asynccontextmanager
 async def lifespan(_app):
     init_db()
     init_commerce_db()
+    init_counts_db()
     yield
 
 
-app = FastAPI(title='StockFlow', version='0.1.0', lifespan=lifespan)
+app = FastAPI(title='StockFlow', version='0.2.0', lifespan=lifespan)
 
 
 @app.exception_handler(service.DomainError)
@@ -165,3 +166,33 @@ def new_reservation(data:ReservationIn):
 @app.post('/api/reservations/{reservation_id}/{action}')
 def reservation_action(reservation_id:int,action:Literal['release','fulfill']):
     return commerce.finalize_reservation(reservation_id,action)
+
+
+from . import counts
+
+class CountIn(BaseModel):
+    warehouse_id: int = Field(gt=0)
+    reference: str = Field(min_length=1,max_length=120)
+
+class CountQuantityIn(BaseModel):
+    quantity: int = Field(ge=0)
+
+@app.get('/api/counts')
+def list_stock_counts():
+    return counts.list_counts()
+
+@app.post('/api/counts',status_code=201)
+def create_stock_count(data:CountIn):
+    return counts.create(**data.model_dump())
+
+@app.get('/api/counts/{count_id}/lines')
+def count_lines(count_id:int):
+    return counts.lines(count_id)
+
+@app.put('/api/counts/{count_id}/lines/{product_id}')
+def record_count(count_id:int,product_id:int,data:CountQuantityIn):
+    return counts.record(count_id,product_id,data.quantity)
+
+@app.post('/api/counts/{count_id}/{action}')
+def close_count(count_id:int,action:Literal['apply','cancel']):
+    return counts.finalize(count_id,action)

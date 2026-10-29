@@ -104,3 +104,28 @@ def init_commerce_db():
         CREATE INDEX IF NOT EXISTS idx_reservations_stock
           ON reservations(product_id,warehouse_id,status);
         ''')
+
+
+def init_counts_db():
+    """Add cycle-count tables safely to existing local databases."""
+    with connect(write=True) as db:
+        db.executescript('''
+        CREATE TABLE IF NOT EXISTS stock_counts (
+            id INTEGER PRIMARY KEY,
+            warehouse_id INTEGER NOT NULL REFERENCES warehouses(id),
+            reference TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'OPEN' CHECK(status IN ('OPEN','APPLIED','CANCELLED')),
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+            closed_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS stock_count_lines (
+            count_id INTEGER NOT NULL REFERENCES stock_counts(id),
+            product_id INTEGER NOT NULL REFERENCES products(id),
+            expected INTEGER NOT NULL CHECK(expected>=0),
+            last_movement_id INTEGER NOT NULL DEFAULT 0,
+            counted INTEGER CHECK(counted>=0),
+            PRIMARY KEY(count_id,product_id)
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_one_open_count_per_warehouse
+            ON stock_counts(warehouse_id) WHERE status='OPEN';
+        ''')

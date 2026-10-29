@@ -76,3 +76,17 @@ The application now also includes supplier organizations (no individual or custo
 ### Engineering boundaries
 
 This is an expanded local starter, not a complete ERP or production-deployable service. It does not yet include valuation, multi-line purchasing UI, user authentication, supplier billing, migration versioning, or multi-worker stress tests. Do not run it on a public network without security hardening. Persistent data is stored outside the extracted project under `~/.stockflow/` by default.
+
+## Cycle counts and inventory reconciliation (v0.2)
+
+Open **Physical stock counts & reconciliation** on the main page, select a warehouse and enter a count reference. StockFlow snapshots every active product's balance in that warehouse (plus inactive products that still have stock). Enter a nonnegative physical quantity for every line and select **Apply reconciliation**. The system posts a distinct `ADJUST` ledger movement for each discrepancy, atomically updating inventory balances. Alternatively, cancel the open count.
+
+- Only one open count is permitted per warehouse.
+- Counts preserve snapshot quantities and the last movement ID, rejecting application if any counted SKU has changed since the count was opened (including quantities that later returned to the original value).
+- Applying a count requires all lines to be recorded; adjusted quantities cannot undercut existing active reservations.
+- Count application and cancellation are atomic and safely repeatable. Closed counts retain their line history and cannot be edited.
+- Existing databases are extended with additional tables at startup; previous inventory, receipts, and reservations are retained.
+
+API routes: `GET/POST /api/counts`, `GET /api/counts/{id}/lines`, `PUT /api/counts/{id}/lines/{product_id}`, and `POST /api/counts/{id}/apply` or `/cancel`. Full schemas are at `/docs`.
+
+**Limitations:** cycle counts are intentionally snapshot based and require a restart if relevant stock changes before reconciliation; there is currently no counted-by user attribution or approval workflow, and there is no user authentication. Run this app locally, not on an untrusted network.
