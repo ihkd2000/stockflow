@@ -42,3 +42,6 @@ Keep each feature as a realistic business request. Existing receiving, issuing, 
 - Demand estimation using historical issues (excluding transfers and adjustments)
 - Proposal preview and revalidation with explicit human approval
 - Cross-warehouse cost/lead-time optimization and demand variability
+
+- [x] Separate existing workflows into navigable views (v0.4.0).
+- [ ] Add searchable product and warehouse listings, with edit and deactivation operations.

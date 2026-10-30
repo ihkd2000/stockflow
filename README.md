@@ -2,6 +2,7 @@
 
 A small, production-minded inventory operations application for warehouses. Built with **Python, FastAPI, SQLite, and a responsive browser UI**. All records are about products, warehouse locations, and inventory movements.
 
+
 ## Getting started
 
 Python 3.10+ required. From the project root:
@@ -92,7 +93,7 @@ API routes: `GET/POST /api/counts`, `GET /api/counts/{id}/lines`, `PUT /api/coun
 **Limitations:** cycle counts are intentionally snapshot based and require a restart if relevant stock changes before reconciliation; there is currently no counted-by user attribution or approval workflow, and there is no user authentication. Run this app locally, not on an untrusted network.
 
 
-## Inventory Risk & Decision Center (v0.3.0)
+## Inventory Risk & Decision Center (v0.4.0)
 
 The risk panel on the dashboard allows configuring **daily demand**, **supplier lead time**, and **safety buffer days** for each product and warehouse. It calculates free stock (`on_hand - active_reservations`), target stock (`ceil(daily_demand * (lead_days + safety_days))`), days of coverage, and a transparent risk status.
 
@@ -106,3 +107,8 @@ API: `PUT /api/risk-policies` and `GET /api/inventory-risks`. See `/docs` for re
 **Scope / limitations:** demand is manually configured (not learned from movements), is assumed constant, and inbound purchase orders are deliberately excluded because the current schema does not store confirmed delivery dates. No supplier optimization, delivery guarantee, forecasting confidence, or pending-receipt deduction is implied. This release is a planning aid rather than a verified forecast.
 
 Run `python -m pytest -q` for regression tests.
+
+
+## Multi-page interface (v0.4.0)
+
+The navigation bar now organizes existing features into nine separate views: Dashboard, Inventory, Products, Warehouses, Purchasing, Reservations, Cycle Counts, Risk Center, and Activity History. All pages keep the existing FastAPI endpoints and business logic; links can be opened directly, and browser back/forward navigation is supported. The dashboard shows product and warehouse totals, reorder alerts, and warehouse inventory. This release focuses on navigation and presentation, not new CRUD behavior.

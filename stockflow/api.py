@@ -16,7 +16,7 @@ async def lifespan(_app):
     yield
 
 
-app = FastAPI(title='StockFlow', version='0.3.0', lifespan=lifespan)
+app = FastAPI(title='StockFlow', version='0.4.0', lifespan=lifespan)
 
 
 @app.exception_handler(service.DomainError)
@@ -47,7 +47,10 @@ class OperationIn(BaseModel):
 
 
 @app.get('/', response_class=HTMLResponse, include_in_schema=False)
-def index():
+@app.get('/{page}', response_class=HTMLResponse, include_in_schema=False)
+def index(page: str = 'dashboard'):
+    if page not in {'dashboard','inventory','products','warehouses','purchasing','reservations','counts','risks','activity'}:
+        raise HTTPException(status_code=404, detail='Page not found')
     return (Path(__file__).parent / 'static' / 'index.html').read_text(encoding='utf-8')
 
 
