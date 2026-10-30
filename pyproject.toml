@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stockflow"
-version = "0.2.0"
+version = "0.3.0"
 description = "Warehouse inventory operations with an auditable stock ledger"
 requires-python = ">=3.10"
 dependencies = ["fastapi>=0.110,<1", "uvicorn>=0.27,<1"]

@@ -5,17 +5,18 @@ from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from . import service
-from .db import init_db, init_commerce_db, init_counts_db
+from .db import init_db, init_commerce_db, init_counts_db, init_risks_db
 
 @asynccontextmanager
 async def lifespan(_app):
     init_db()
     init_commerce_db()
     init_counts_db()
+    init_risks_db()
     yield
 
 
-app = FastAPI(title='StockFlow', version='0.2.0', lifespan=lifespan)
+app = FastAPI(title='StockFlow', version='0.3.0', lifespan=lifespan)
 
 
 @app.exception_handler(service.DomainError)
@@ -196,3 +197,21 @@ def record_count(count_id:int,product_id:int,data:CountQuantityIn):
 @app.post('/api/counts/{count_id}/{action}')
 def close_count(count_id:int,action:Literal['apply','cancel']):
     return counts.finalize(count_id,action)
+
+
+from . import risks
+
+class RiskPolicyIn(BaseModel):
+    product_id: int = Field(gt=0)
+    warehouse_id: int = Field(gt=0)
+    daily_demand: float = Field(ge=0, le=1000000, allow_inf_nan=False)
+    lead_days: int = Field(ge=0, le=3650)
+    safety_days: int = Field(ge=0, le=3650)
+
+@app.put('/api/risk-policies')
+def save_risk_policy(payload: RiskPolicyIn):
+    return risks.configure(**payload.model_dump())
+
+@app.get('/api/inventory-risks')
+def inventory_risks():
+    return risks.assess()

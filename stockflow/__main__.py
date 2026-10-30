@@ -1,6 +1,6 @@
 """Command-line entry point: python -m stockflow serve"""
 import argparse
-from .db import init_db, init_commerce_db, init_counts_db
+from .db import init_db, init_commerce_db, init_counts_db, init_risks_db
 
 def main():
     parser = argparse.ArgumentParser(prog='python -m stockflow')
@@ -14,6 +14,7 @@ def main():
         init_db()
         init_commerce_db()
         init_counts_db()
+        init_risks_db()
         print('StockFlow database initialized')
     else:
         import uvicorn

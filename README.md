@@ -1,6 +1,6 @@
 # StockFlow
 
-A small, production-minded inventory operations application for warehouses. Built with **Python, FastAPI, SQLite, and a responsive browser UI**. All records are about products, warehouse locations, and inventory movements.
+A small, production-minded inventory operations application for warehouses. Built with **Python, FastAPI, SQLite, and a responsive browser UI**. It is a real application starter, not a pre-scripted AI benchmark. All records are about products, warehouse locations, and inventory movements; **no user accounts or personal/customer information** are collected.
 
 ## Getting started
 
@@ -77,7 +77,7 @@ The application now also includes supplier organizations (no individual or custo
 
 This is an expanded local starter, not a complete ERP or production-deployable service. It does not yet include valuation, multi-line purchasing UI, user authentication, supplier billing, migration versioning, or multi-worker stress tests. Do not run it on a public network without security hardening. Persistent data is stored outside the extracted project under `~/.stockflow/` by default.
 
-## Cycle counts and inventory reconciliation (v0.2)
+## Cycle counts and inventory reconciliation (v0.3)
 
 Open **Physical stock counts & reconciliation** on the main page, select a warehouse and enter a count reference. StockFlow snapshots every active product's balance in that warehouse (plus inactive products that still have stock). Enter a nonnegative physical quantity for every line and select **Apply reconciliation**. The system posts a distinct `ADJUST` ledger movement for each discrepancy, atomically updating inventory balances. Alternatively, cancel the open count.
 
@@ -90,3 +90,19 @@ Open **Physical stock counts & reconciliation** on the main page, select a wareh
 API routes: `GET/POST /api/counts`, `GET /api/counts/{id}/lines`, `PUT /api/counts/{id}/lines/{product_id}`, and `POST /api/counts/{id}/apply` or `/cancel`. Full schemas are at `/docs`.
 
 **Limitations:** cycle counts are intentionally snapshot based and require a restart if relevant stock changes before reconciliation; there is currently no counted-by user attribution or approval workflow, and there is no user authentication. Run this app locally, not on an untrusted network.
+
+
+## Inventory Risk & Decision Center (v0.3.0)
+
+The risk panel on the dashboard allows configuring **daily demand**, **supplier lead time**, and **safety buffer days** for each product and warehouse. It calculates free stock (`on_hand - active_reservations`), target stock (`ceil(daily_demand * (lead_days + safety_days))`), days of coverage, and a transparent risk status.
+
+- **HIGH:** insufficient stock to cover the supplier lead time; **MODERATE:** lead time covered but buffer not covered; **LOW:** target covered. Unconfigured pairs are explicitly marked **UNCONFIGURED**.
+- **Transfer review:** suggests transferring only from another warehouse's free stock above its target (or reorder point if the warehouse has no planning settings).
+- **Replenishment review:** indicates the remaining target shortfall for purchasing consideration. Recommendations are **independent options**, not additive orders.
+- **No automatic execution:** recommendations do not create transfers, receipts, or purchase orders. Before any actual movement, users must use the existing operation flow, which rechecks stock and reservation constraints.
+
+API: `PUT /api/risk-policies` and `GET /api/inventory-risks`. See `/docs` for request schemas.
+
+**Scope / limitations:** demand is manually configured (not learned from movements), is assumed constant, and inbound purchase orders are deliberately excluded because the current schema does not store confirmed delivery dates. No supplier optimization, delivery guarantee, forecasting confidence, or pending-receipt deduction is implied. This release is a planning aid rather than a verified forecast.
+
+Run `python -m pytest -q` for regression tests.

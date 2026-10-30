@@ -1,4 +1,6 @@
 
+# Python package metadata
+*.egg-info/
 # Environment variables and secrets
 .env
 .env.*

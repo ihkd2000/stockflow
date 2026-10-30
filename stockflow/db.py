@@ -129,3 +129,15 @@ def init_counts_db():
         CREATE UNIQUE INDEX IF NOT EXISTS idx_one_open_count_per_warehouse
             ON stock_counts(warehouse_id) WHERE status='OPEN';
         ''')
+
+
+def init_risks_db():
+    """Add planning policies without changing ledger data."""
+    with connect(write=True) as db:
+        db.execute('''CREATE TABLE IF NOT EXISTS risk_policies (
+          product_id INTEGER NOT NULL REFERENCES products(id),
+          warehouse_id INTEGER NOT NULL REFERENCES warehouses(id),
+          daily_demand REAL NOT NULL CHECK(daily_demand>=0 AND daily_demand<=1000000),
+          lead_days INTEGER NOT NULL CHECK(lead_days>=0),
+          safety_days INTEGER NOT NULL CHECK(safety_days>=0),
+          PRIMARY KEY(product_id,warehouse_id))''')

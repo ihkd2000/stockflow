@@ -19,7 +19,7 @@ Keep each feature as a realistic business request. Existing receiving, issuing, 
 - Rollback on failure never leaves an incomplete multi-step transaction.
 - Existing workflows remain compatible, and documentation stays accurate.
 
-### Completed in v0.2
+### Completed in v0.3
 - Physical cycle counts per warehouse with product-by-product entries, variance review, and atomic ledger reconciliation.
 - Stale snapshot detection, reserved-stock constraints, safe retry and cancellation, regression tests.
 
@@ -28,3 +28,17 @@ Keep each feature as a realistic business request. Existing receiving, issuing, 
 - Scoped cycle counts, blind counting, variance approval, and multi-pass recount workflows.
 - Purchase-order editing, receiving discrepancies, and supplier returns.
 - Sales orders and fulfillment with inventory allocation.
+
+
+### Completed — Inventory Risk & Decision Center (0.3.0)
+- Per-warehouse demand, lead time and safety buffer policies
+- Explainable shortage risk, coverage and shortfall calculations
+- Non-mutating transfer and replenishment review suggestions
+- API and browser panel with regression tests
+
+### Potential future work
+- Dedicated multi-page navigation and reporting
+- Confirmed expected-delivery dates and time-phased inbound supply
+- Demand estimation using historical issues (excluding transfers and adjustments)
+- Proposal preview and revalidation with explicit human approval
+- Cross-warehouse cost/lead-time optimization and demand variability
