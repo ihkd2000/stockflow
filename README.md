@@ -1,6 +1,6 @@
 # StockFlow
 
-A small, production-minded inventory operations application for warehouses. Built with **Python, FastAPI, SQLite, and a responsive browser UI**. It is a real application starter, not a pre-scripted AI benchmark. All records are about products, warehouse locations, and inventory movements; **no user accounts or personal/customer information** are collected.
+A small, production-minded inventory operations application for warehouses. Built with **Python, FastAPI, SQLite, and a responsive browser UI**. All records are about products, warehouse locations, and inventory movements.
 
 ## Getting started
 
