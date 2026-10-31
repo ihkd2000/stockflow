@@ -2,7 +2,7 @@
 import sqlite3
 import json
 from .db import connect
-from .service import DomainError, _exists, _change
+from .service import DomainError, _exists, _change, require_active_product
 
 
 def list_rows(sql, args=()):
@@ -33,7 +33,7 @@ def create_order(number, supplier_id, warehouse_id, lines):
             _exists(db,'suppliers',supplier_id)
             _exists(db,'warehouses',warehouse_id)
             for pid in ids:
-                _exists(db,'products',pid)
+                require_active_product(db,pid)
             c = db.execute('INSERT INTO purchase_orders(number,supplier_id,warehouse_id) VALUES(?,?,?)',
                            (number.strip().upper(),supplier_id,warehouse_id))
             for line in lines:
@@ -96,7 +96,7 @@ def reserve(reference,product_id,warehouse_id,quantity):
     if not reference.strip() or quantity<=0:
         raise DomainError('Reference and positive quantity required')
     with connect(write=True) as db:
-        _exists(db,'products',product_id)
+        require_active_product(db,product_id)
         _exists(db,'warehouses',warehouse_id)
         prior=db.execute('SELECT * FROM reservations WHERE reference=?',(reference,)).fetchone()
         if prior:

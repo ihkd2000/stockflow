@@ -79,7 +79,7 @@ def operate(kind, product_id, quantity, warehouse_id, target_warehouse_id=None, 
                 if existing['request_hash'] != digest:
                     raise DomainError('Idempotency key was already used for a different operation', 409)
                 return json.loads(existing['result_json'])
-        _exists(db, 'products', product_id)
+        require_active_product(db, product_id)
         _exists(db, 'warehouses', warehouse_id)
         if kind in ('ISSUE', 'TRANSFER') or (kind == 'ADJUST' and quantity < 0):
             current = db.execute('SELECT quantity FROM balances WHERE product_id=? AND warehouse_id=?', (product_id, warehouse_id)).fetchone()
@@ -102,3 +102,82 @@ def operate(kind, product_id, quantity, warehouse_id, target_warehouse_id=None, 
         if key:
             db.execute('INSERT INTO operations VALUES(?,?,?)', (key, digest, json.dumps(result)))
         return result
+
+
+def _product_filters(search='', category='', status='all'):
+    clauses, args = [], []
+    if search.strip():
+        clauses.append("(sku LIKE ? ESCAPE '\\' OR name LIKE ? ESCAPE '\\')")
+        term = '%' + search.strip().replace('\\','\\\\').replace('%','\\%').replace('_','\\_') + '%'
+        args.extend((term, term))
+    if category.strip():
+        clauses.append('category = ?')
+        args.append(category.strip())
+    if status != 'all':
+        clauses.append('active = ?')
+        args.append(1 if status == 'active' else 0)
+    return (' WHERE ' + ' AND '.join(clauses)) if clauses else '', args
+
+
+def catalog(search='', category='', status='all', sort='sku', descending=False, page=1, page_size=20):
+    if status not in ('all','active','inactive') or sort not in ('sku','name','category','reorder_point'):
+        raise DomainError('Invalid catalog filter')
+    where, args = _product_filters(search, category, status)
+    with connect() as db:
+        total = db.execute('SELECT COUNT(*) FROM products' + where, args).fetchone()[0]
+        data = [dict(r) for r in db.execute('SELECT * FROM products' + where + f' ORDER BY {sort} {"DESC" if descending else "ASC"}, id ASC LIMIT ? OFFSET ?', (*args, page_size, (page-1)*page_size))]
+    return {'items': data, 'total': total, 'page': page, 'page_size': page_size, 'pages': max(1,(total+page_size-1)//page_size)}
+
+
+def catalog_export(search='', category='', status='all'):
+    where, args = _product_filters(search, category, status)
+    return rows('SELECT sku,name,category,reorder_point,active FROM products' + where + ' ORDER BY sku,id', args)
+
+
+def update_product(product_id, sku, name, category, reorder_point):
+    sku, name, category = sku.strip().upper(), name.strip(), category.strip() or 'General'
+    if not sku or not name or reorder_point < 0:
+        raise DomainError('SKU and name are required; reorder point must be nonnegative')
+    try:
+        with connect(write=True) as db:
+            _exists(db,'products',product_id)
+            db.execute('UPDATE products SET sku=?,name=?,category=?,reorder_point=? WHERE id=?',(sku,name,category,reorder_point,product_id))
+            return dict(db.execute('SELECT * FROM products WHERE id=?',(product_id,)).fetchone())
+    except sqlite3.IntegrityError:
+        raise DomainError('SKU already exists',409)
+
+
+def set_product_status(product_id, active):
+    with connect(write=True) as db:
+        _exists(db,'products',product_id)
+        if not active:
+            # Preserve existing commitments and prevent a stranded active reservation.
+            held = db.execute("SELECT COUNT(*) FROM reservations WHERE product_id=? AND status='ACTIVE'",(product_id,)).fetchone()[0]
+            if held:
+                raise DomainError('Release or fulfill active reservations before deactivation',409)
+            pending = db.execute("SELECT COUNT(*) FROM purchase_order_lines l JOIN purchase_orders o ON o.id=l.order_id WHERE l.product_id=? AND o.status IN ('DRAFT','OPEN','PARTIAL')",(product_id,)).fetchone()[0]
+            if pending:
+                raise DomainError('Resolve open purchase orders before deactivation',409)
+        db.execute('UPDATE products SET active=? WHERE id=?',(int(active),product_id))
+        return dict(db.execute('SELECT * FROM products WHERE id=?',(product_id,)).fetchone())
+
+
+def product_detail(product_id):
+    with connect() as db:
+        product = db.execute('SELECT * FROM products WHERE id=?',(product_id,)).fetchone()
+        if not product:
+            raise DomainError('Unknown product',404)
+        stock = [dict(r) for r in db.execute('''SELECT w.code warehouse,w.name,coalesce(b.quantity,0) on_hand,
+            coalesce((SELECT sum(quantity) FROM reservations r WHERE r.product_id=? AND r.warehouse_id=w.id AND r.status='ACTIVE'),0) reserved
+            FROM warehouses w LEFT JOIN balances b ON b.warehouse_id=w.id AND b.product_id=? ORDER BY w.code''',(product_id,product_id))]
+        movements = [dict(r) for r in db.execute('''SELECT m.created_at,m.action,w.code warehouse,m.delta,m.reference FROM movements m JOIN warehouses w ON w.id=m.warehouse_id WHERE m.product_id=? ORDER BY m.id DESC LIMIT 30''',(product_id,))]
+        reservations = [dict(r) for r in db.execute('''SELECT r.reference,w.code warehouse,r.quantity,r.status FROM reservations r JOIN warehouses w ON w.id=r.warehouse_id WHERE r.product_id=? AND r.status='ACTIVE' ORDER BY r.id DESC''',(product_id,))]
+    return {'product':dict(product),'stock':stock,'movements':movements,'reservations':reservations}
+
+
+def require_active_product(db, product_id):
+    product = db.execute('SELECT active FROM products WHERE id=?',(product_id,)).fetchone()
+    if not product:
+        raise DomainError('Unknown product',404)
+    if not product['active']:
+        raise DomainError('Product is inactive',409)

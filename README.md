@@ -2,7 +2,6 @@
 
 A small, production-minded inventory operations application for warehouses. Built with **Python, FastAPI, SQLite, and a responsive browser UI**. All records are about products, warehouse locations, and inventory movements.
 
-
 ## Getting started
 
 Python 3.10+ required. From the project root:
@@ -112,3 +111,19 @@ Run `python -m pytest -q` for regression tests.
 ## Multi-page interface (v0.4.0)
 
 The navigation bar now organizes existing features into nine separate views: Dashboard, Inventory, Products, Warehouses, Purchasing, Reservations, Cycle Counts, Risk Center, and Activity History. All pages keep the existing FastAPI endpoints and business logic; links can be opened directly, and browser back/forward navigation is supported. The dashboard shows product and warehouse totals, reorder alerts, and warehouse inventory. This release focuses on navigation and presentation, not new CRUD behavior.
+
+
+## Advanced Product Management (v0.5.0)
+
+The Products page now includes a searchable, sortable, server-paginated catalog with category and status filters, product editing, deactivation/reactivation, product detail views (warehouse balances, reservations and movements), and filtered CSV export.
+
+- `GET /api/products` remains the existing array response for backward compatibility.
+- `GET /api/products/catalog` accepts `search`, `category`, `status`, `sort`, `descending`, `page`, and `page_size`.
+- `GET /api/products/{id}` returns stock, reservations and movement details.
+- `PUT /api/products/{id}` updates a product and enforces SKU uniqueness.
+- `PATCH /api/products/{id}/status` deactivates/reactivates a product; outstanding purchase orders and active reservations must be resolved before deactivation.
+- `GET /api/products/export` downloads the filtered catalog as CSV.
+
+Inactive products remain visible in historical records, but new inventory operations, new reservations and new purchase order lines are rejected. Existing movement history is never deleted.
+
+**Scope:** There is no user authentication, product-version concurrency token, or production-grade database migration tool yet. Do not expose this local starter on a public network.

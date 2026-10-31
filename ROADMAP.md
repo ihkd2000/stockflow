@@ -45,3 +45,5 @@ Keep each feature as a realistic business request. Existing receiving, issuing, 
 
 - [x] Separate existing workflows into navigable views (v0.4.0).
 - [ ] Add searchable product and warehouse listings, with edit and deactivation operations.
+
+- [x] Advanced product catalog management: search, pagination, editing, safe deactivation, details, CSV export (v0.5.0)

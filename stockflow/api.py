@@ -16,7 +16,7 @@ async def lifespan(_app):
     yield
 
 
-app = FastAPI(title='StockFlow', version='0.4.0', lifespan=lifespan)
+app = FastAPI(title='StockFlow', version='0.5.0', lifespan=lifespan)
 
 
 @app.exception_handler(service.DomainError)
@@ -57,6 +57,52 @@ def index(page: str = 'dashboard'):
 @app.get('/api/products')
 def products():
     return service.rows('SELECT * FROM products ORDER BY sku')
+
+
+@app.get('/api/products/catalog')
+def product_catalog(search: str = '', category: str = '', status: Literal['all','active','inactive'] = 'all', sort: Literal['sku','name','category','reorder_point'] = 'sku', descending: bool = False, page: int = 1, page_size: int = 20):
+    if not 1 <= page <= 100000 or not 1 <= page_size <= 100:
+        raise HTTPException(400, 'Invalid pagination parameters')
+    return service.catalog(search, category, status, sort, descending, page, page_size)
+
+
+class ProductUpdate(BaseModel):
+    sku: str = Field(min_length=1, max_length=80)
+    name: str = Field(min_length=1, max_length=160)
+    category: str = Field(default='General', max_length=80)
+    reorder_point: int = Field(ge=0)
+
+
+class ProductStatus(BaseModel):
+    active: bool
+
+
+@app.get('/api/products/export')
+def export_products(search: str = '', category: str = '', status: Literal['all','active','inactive'] = 'all'):
+    from fastapi.responses import StreamingResponse
+    import csv, io
+    items = service.catalog_export(search, category, status)
+    buffer = io.StringIO(newline='')
+    writer = csv.writer(buffer)
+    writer.writerow(['SKU','Name','Category','Reorder Point','Status'])
+    for item in items:
+        writer.writerow([item['sku'],item['name'],item['category'],item['reorder_point'], 'Active' if item['active'] else 'Inactive'])
+    return StreamingResponse(iter([buffer.getvalue()]), media_type='text/csv', headers={'Content-Disposition':'attachment; filename="stockflow-products.csv"'})
+
+
+@app.get('/api/products/{product_id}')
+def product_detail(product_id: int):
+    return service.product_detail(product_id)
+
+
+@app.put('/api/products/{product_id}')
+def update_product(product_id: int, payload: ProductUpdate):
+    return service.update_product(product_id, **payload.model_dump())
+
+
+@app.patch('/api/products/{product_id}/status')
+def product_status(product_id: int, payload: ProductStatus):
+    return service.set_product_status(product_id, payload.active)
 
 
 @app.post('/api/products', status_code=201)
