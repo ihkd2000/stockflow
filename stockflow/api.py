@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from . import service
-from .db import init_db, init_commerce_db, init_counts_db, init_risks_db
+from .db import init_db, init_commerce_db, init_counts_db, init_risks_db, init_sales_db
 
 @asynccontextmanager
 async def lifespan(_app):
@@ -13,10 +13,11 @@ async def lifespan(_app):
     init_commerce_db()
     init_counts_db()
     init_risks_db()
+    init_sales_db()
     yield
 
 
-app = FastAPI(title='StockFlow', version='0.5.0', lifespan=lifespan)
+app = FastAPI(title='StockFlow', version='0.6.0', lifespan=lifespan)
 
 
 @app.exception_handler(service.DomainError)
@@ -49,7 +50,7 @@ class OperationIn(BaseModel):
 @app.get('/', response_class=HTMLResponse, include_in_schema=False)
 @app.get('/{page}', response_class=HTMLResponse, include_in_schema=False)
 def index(page: str = 'dashboard'):
-    if page not in {'dashboard','inventory','products','warehouses','purchasing','reservations','counts','risks','activity'}:
+    if page not in {'dashboard','inventory','products','warehouses','purchasing','reservations','sales','counts','risks','activity'}:
         raise HTTPException(status_code=404, detail='Page not found')
     return (Path(__file__).parent / 'static' / 'index.html').read_text(encoding='utf-8')
 
@@ -264,3 +265,46 @@ def save_risk_policy(payload: RiskPolicyIn):
 @app.get('/api/inventory-risks')
 def inventory_risks():
     return risks.assess()
+
+
+from . import sales
+
+class SalesIn(BaseModel):
+    number: str = Field(min_length=1, max_length=80)
+    warehouse_id: int = Field(gt=0)
+    lines: list[OrderLineIn] = Field(min_length=1)
+
+class SalesEditIn(BaseModel):
+    lines: list[OrderLineIn] = Field(min_length=1)
+
+class SalesFulfillIn(BaseModel):
+    quantity: int = Field(gt=0)
+    idempotency_key: str = Field(min_length=1)
+
+@app.get('/api/sales-orders')
+def sales_list():
+    return sales.list_orders()
+
+@app.get('/api/sales-orders/{order_id}')
+def sales_detail(order_id:int):
+    return sales.detail(order_id)
+
+@app.post('/api/sales-orders',status_code=201)
+def sales_create(data:SalesIn):
+    return sales.create(**data.model_dump())
+
+@app.put('/api/sales-orders/{order_id}')
+def sales_edit(order_id:int,data:SalesEditIn):
+    return sales.edit(order_id,[x.model_dump() for x in data.lines])
+
+@app.post('/api/sales-orders/{order_id}/allocate')
+def sales_allocate(order_id:int):
+    return sales.allocate(order_id)
+
+@app.post('/api/sales-orders/{order_id}/{action}')
+def sales_transition(order_id:int,action:Literal['confirm','cancel']):
+    return sales.transition(order_id,action)
+
+@app.post('/api/sales-orders/{order_id}/lines/{line_id}/fulfill')
+def sales_fulfill(order_id:int,line_id:int,data:SalesFulfillIn):
+    return sales.fulfill(order_id,line_id,data.quantity,data.idempotency_key)

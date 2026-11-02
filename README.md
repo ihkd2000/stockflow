@@ -127,3 +127,9 @@ The Products page now includes a searchable, sortable, server-paginated catalog 
 Inactive products remain visible in historical records, but new inventory operations, new reservations and new purchase order lines are rejected. Existing movement history is never deleted.
 
 **Scope:** There is no user authentication, product-version concurrency token, or production-grade database migration tool yet. Do not expose this local starter on a public network.
+
+## Sales Orders (v0.6.0)
+
+The **Sales Orders** page (`/sales`) supports synthetic order references and no customer records. Create multi-line drafts using `SKU, quantity` entries, edit lines before confirmation, confirm the order, allocate its remaining stock, and fulfill allocated lines partly or completely. Cancel an open or partially fulfilled order to release only outstanding reservations; already shipped units remain in the movement ledger.
+
+Allocation is an atomic, all-or-nothing operation. Fulfillment requires an idempotency key, decrements on-hand stock and the active reservation together, and cannot exceed the allocated quantity. A standalone reservation endpoint cannot finalize a sales allocation. Existing SQLite databases are extended on app startup without deleting stock or purchasing records. Sales are scoped to one warehouse per order; cross-warehouse allocations, pricing and shipping are future work.

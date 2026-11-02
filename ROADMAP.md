@@ -47,3 +47,11 @@ Keep each feature as a realistic business request. Existing receiving, issuing, 
 - [ ] Add searchable product and warehouse listings, with edit and deactivation operations.
 
 - [x] Advanced product catalog management: search, pagination, editing, safe deactivation, details, CSV export (v0.5.0)
+
+### v0.6.0 — Sales Orders & Fulfillment
+- [x] Draft multi-line sales orders, edit drafts, confirm and cancel
+- [x] Atomic warehouse allocation using the existing reservation ledger
+- [x] Partial fulfillment, retries, and movement auditing
+- [x] Dedicated Sales Orders page with order detail and actions
+- [ ] Cross-warehouse allocation and transfer planning
+- [ ] Sales order search, pagination, pricing and shipping workflow

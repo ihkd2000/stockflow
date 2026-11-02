@@ -115,6 +115,8 @@ def finalize_reservation(reservation_id,action):
         row=db.execute('SELECT * FROM reservations WHERE id=?',(reservation_id,)).fetchone()
         if not row:
             raise DomainError('Reservation not found',404)
+        if db.execute('SELECT 1 FROM sales_order_lines WHERE reservation_id=?',(reservation_id,)).fetchone():
+            raise DomainError('Sales allocations must be fulfilled through the sales order',409)
         if row['status']!='ACTIVE':
             raise DomainError('Reservation is already finalized',409)
         if action=='fulfill':

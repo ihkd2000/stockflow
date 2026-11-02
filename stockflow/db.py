@@ -141,3 +141,30 @@ def init_risks_db():
           lead_days INTEGER NOT NULL CHECK(lead_days>=0),
           safety_days INTEGER NOT NULL CHECK(safety_days>=0),
           PRIMARY KEY(product_id,warehouse_id))''')
+
+
+def init_sales_db():
+    """Create additive sales tables for existing StockFlow databases."""
+    with connect(write=True) as db:
+        db.executescript("""
+        CREATE TABLE IF NOT EXISTS sales_orders (
+            id INTEGER PRIMARY KEY, number TEXT NOT NULL UNIQUE,
+            warehouse_id INTEGER NOT NULL REFERENCES warehouses(id),
+            status TEXT NOT NULL DEFAULT 'DRAFT' CHECK(status IN ('DRAFT','CONFIRMED','PARTIAL','FULFILLED','CANCELLED')),
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        );
+        CREATE TABLE IF NOT EXISTS sales_order_lines (
+            id INTEGER PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES sales_orders(id),
+            product_id INTEGER NOT NULL REFERENCES products(id),
+            ordered INTEGER NOT NULL CHECK(ordered>0),
+            allocated INTEGER NOT NULL DEFAULT 0 CHECK(allocated>=0),
+            fulfilled INTEGER NOT NULL DEFAULT 0 CHECK(fulfilled>=0),
+            reservation_id INTEGER REFERENCES reservations(id),
+            CHECK(fulfilled+allocated<=ordered), UNIQUE(order_id,product_id)
+        );
+        CREATE TABLE IF NOT EXISTS sales_fulfillment_keys (
+            key TEXT PRIMARY KEY, order_id INTEGER NOT NULL REFERENCES sales_orders(id),
+            line_id INTEGER NOT NULL REFERENCES sales_order_lines(id),
+            quantity INTEGER NOT NULL CHECK(quantity>0), result_json TEXT NOT NULL
+        );
+        """)
